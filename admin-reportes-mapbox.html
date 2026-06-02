@@ -47,7 +47,7 @@ function normalizeReport(r){
 async function loadReports(){
   const {data,error}=await supabaseClient
     .from('reports')
-    .select('id,lamp_id,failure_type,status,user_lat,user_lng,comment,source,client_created_at,created_at')
+    .select("id,folio,issue_type,comments,latitude,longitude,created_at")
     .order('created_at',{ascending:false});
   if(error){ console.error('Error cargando reportes desde Supabase:', error); reportCache=[]; return; }
   reportCache=(data||[]).map(normalizeReport);
