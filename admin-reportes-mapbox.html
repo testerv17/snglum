@@ -35,22 +35,44 @@ function normalizeReport(r){
   return {
     id: r.id ? 'SN-2026-'+String(r.id).padStart(6,'0') : 'SN-2026-'+String(Date.now()).slice(-6),
     raw_id: r.id,
-    lamp_id: r.lamp_id,
-    failure_type: r.failure_type || 'Reporte ciudadano',
-    status: r.status || 'ACTIVO',
+
+    // ESTRUCTURA REAL DE TU TABLA reports:
+    // reports.folio se relaciona con LAMPS.lamp_id
+    lamp_id: r.folio,
+
+    // reports.issue_type es el tipo de falla reportada
+    failure_type: r.issue_type || 'Reporte ciudadano',
+
+    // Tu tabla reports no usa status para este flujo; lo dejamos visual como ACTIVO
+    status: 'ACTIVO',
+
     created_at: r.created_at || new Date().toISOString(),
-    lat: r.user_lat,
-    lng: r.user_lng,
+
+    // Coordenadas guardadas por el reporte ciudadano
+    lat: r.latitude,
+    lng: r.longitude,
+
+    // Comentario real de Supabase
+    comment: r.comments || '',
+
     source: 'QR ciudadano'
   };
 }
 async function loadReports(){
   const {data,error}=await supabaseClient
     .from('reports')
-    .select("id,folio,issue_type,comments,latitude,longitude,created_at")
+    .select('id,folio,issue_type,comments,latitude,longitude,created_at')
     .order('created_at',{ascending:false});
-  if(error){ console.error('Error cargando reportes desde Supabase:', error); reportCache=[]; return; }
-  reportCache=(data||[]).map(normalizeReport);
+
+  if(error){
+    console.error('Error cargando reportes desde Supabase:', error);
+    reportCache=[];
+    return;
+  }
+
+  reportCache=(data||[])
+    .filter(r => r.folio)
+    .map(normalizeReport);
 }
 function reports(){return reportCache}
 function reportsByLamp(id){return reportCache.filter(r=>r.lamp_id===id)}
