@@ -74,16 +74,13 @@ $('btnSave').onclick=async()=>{
   btn.textContent='Enviando reporte...';
   try{
     const loc=await getReportLocation();
-    const payload={
-      lamp_id:current.lamp_id,
-      failure_type:selectedFailure,
-      status:'ACTIVO',
-      user_lat:loc.lat,
-      user_lng:loc.lng,
-      comment:($('comment')?.value||'').trim(),
-      source:'QR ciudadano',
-      client_created_at:new Date().toISOString()
-    };
+    const payload = {
+  folio: lampId,
+  issue_type: selectedFailure,
+  comments: commentText || null,
+  latitude: userLat,
+  longitude: userLng
+};
     const {data,error}=await supabaseClient
       .from('reports')
       .insert(payload)
