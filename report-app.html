@@ -81,12 +81,14 @@ $('btnSave').onclick=async()=>{
   latitude: userLat,
   longitude: userLng
 };
-    const {data,error}=await supabaseClient
-      .from('reports')
-      .insert(payload)
-      .select('id, created_at')
-      .single();
-    if(error) throw error;
+    const { data, error } = await supabase
+  .from("reports")
+  .insert([payload])
+  .select();
+
+if (error) {
+  throw error;
+}
     const folio = data && data.id ? 'SN-2026-'+String(data.id).padStart(6,'0') : 'SN-2026-'+String(Date.now()).slice(-6);
     $('folioOut').textContent=folio;
     go(4);
