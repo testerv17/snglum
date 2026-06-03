@@ -74,21 +74,26 @@ $('btnSave').onclick=async()=>{
   btn.textContent='Enviando reporte...';
   try{
     const loc=await getReportLocation();
-    const payload = {
-  folio: lampId,
-  issue_type: selectedFailure,
-  comments: commentText || null,
-  latitude: userLat,
-  longitude: userLng
-};
-    const { data, error } = await supabase
-  .from("reports")
-  .insert([payload])
-  .select();
+    const commentText = ($('comment')?.value || '').trim();
 
-if (error) {
-  throw error;
-}
+    const payload = {
+      folio: current.lamp_id,
+      issue_type: selectedFailure,
+      comments: commentText || null,
+      latitude: loc.lat,
+      longitude: loc.lng
+    };
+
+    const { data, error } = await supabase
+      .from('reports')
+      .insert([payload])
+      .select('id, folio, issue_type, comments, latitude, longitude')
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
     const folio = data && data.id ? 'SN-2026-'+String(data.id).padStart(6,'0') : 'SN-2026-'+String(Date.now()).slice(-6);
     $('folioOut').textContent=folio;
     go(4);
