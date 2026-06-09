@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Centro de Control · Alumbrado Público · San Nicolás</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;font-family:'Segoe UI',Arial,sans-serif;background:#1a2744;}
+
+/* ── TOP HEADER ── */
+#header{
+  display:flex;align-items:center;justify-content:space-between;
+  background:linear-gradient(90deg,#1a2f6e 0%,#1e3a8a 100%);
+  padding:0 20px;height:56px;flex-shrink:0;
+  border-bottom:3px solid #e53e3e;
+}
+#header-left{display:flex;align-items:center;gap:14px;}
+#logo{width:176px;height:44px;padding:0;margin:0;border:0;
+  background:transparent;box-shadow:none;border-radius:0;overflow:visible;
+  display:flex;align-items:center;justify-content:flex-start;flex:0 0 176px}
+#logo img{display:block;width:176px;max-width:176px;height:auto;max-height:92px;
+  object-fit:contain;object-position:left center;
+  filter:brightness(0) invert(1) drop-shadow(0 1px 1px rgba(7, 208, 235, 0.15));opacity:.97}
+#header-title h1{font-size:17px;font-weight:700;color:#fff;letter-spacing:.2px;}
+#header-title p{font-size:11px;color:#93c5fd;}
+#live-btn{background:#065f46;border:none;color:#6ee7b7;padding:8px 16px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;}
+.live-dot{width:8px;height:8px;border-radius:50%;background:#34d399;animation:blink 1s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+* Logo frame limpio — sin recuadro */
+.brandLogoFrame{
+  width:176px;height:44px;padding:0;margin:0;border:0;
+  background:transparent;box-shadow:none;border-radius:0;overflow:visible;
+  display:flex;align-items:center;justify-content:flex-start;flex:0 0 176px
+}
+
+.brand img,.brandLogoFrame img{
+  display:block;width:176px;max-width:176px;height:auto;max-height:92px;
+  object-fit:contain;object-position:left center;
+  filter:brightness(0) invert(1) drop-shadow(0 1px 1px rgba(0,0,0,.15));opacity:.97
+}
+/* ── STAT BAR ── */
+#statbar{
+  display:flex;background:#1e3a8a;border-bottom:1px solid #2d4fa0;
+  flex-shrink:0;
+}
+.stat-item{flex:1;padding:10px 20px;border-right:1px solid #2d4fa0;}
+.stat-item:last-child{border-right:none;}
+.stat-label{font-size:9px;font-weight:700;color:#93c5fd;text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px;}
+.stat-value{font-size:24px;font-weight:700;color:#fff;line-height:1;}
+.stat-value.red{color:#f87171;}
+.stat-sub{font-size:10px;color:#60a5fa;margin-top:2px;}
+
+/* ── PROGRESS BAR UNDER STATS ── */
+#routebar{height:4px;background:#1a2f6e;flex-shrink:0;}
+#routefill{height:100%;background:#3b82f6;width:0%;transition:width .5s;}
+
+/* ── MAIN LAYOUT ── */
+#main{display:flex;flex:1;overflow:hidden;height:calc(100vh - 56px - 74px - 4px);}
+
+/* ── MAP ── */
+#mapWrap{flex:1;position:relative;}
+#map{width:100%;height:100%;}
+
+/* MAP LEFT TOOLBAR (like reference) */
+#maptoolbar{
+  position:absolute;top:12px;left:12px;z-index:1000;
+  display:flex;flex-direction:column;gap:4px;
+}
+.mt-btn{width:34px;height:34px;background:#1e3a8a;border:1px solid #2d4fa0;border-radius:6px;color:#93c5fd;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.mt-btn:hover{background:#2d4fa0;}
+
+/* MAP LEGEND */
+#legend{
+  position:absolute;bottom:16px;left:12px;z-index:1000;
+  background:rgba(15,23,60,.85);border:1px solid #2d4fa0;border-radius:8px;
+  padding:8px 12px;display:flex;gap:14px;align-items:center;
+}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:#c7d2fe;}
+.leg-dot{width:10px;height:10px;border-radius:50%;}
+
+/* MAP CONTROLS bottom right */
+#mapctrl{position:absolute;bottom:16px;right:12px;z-index:1000;display:flex;gap:8px;}
+.ctrl-btn{background:#1e3a8a;border:1px solid #2d4fa0;color:#93c5fd;padding:5px 12px;border-radius:6px;font-size:11px;cursor:pointer;}
+.ctrl-btn:hover{background:#2563eb;color:#fff;}
+.ctrl-btn.go{background:#2563eb;color:#fff;}
+
+/* ── RIGHT PANEL ── */
+#rightpanel{
+  width:320px;flex-shrink:0;background:#f8faff;
+  display:flex;flex-direction:column;border-left:1px solid #dbeafe;overflow:hidden;
+}
+
+/* selected lamp banner */
+#selBanner{
+  background:#e0e7ff;border-bottom:1px solid #c7d2fe;
+  padding:8px 14px;display:flex;align-items:center;justify-content:space-between;
+}
+#selBanner .tag{background:#1e3a8a;color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px;letter-spacing:.5px;}
+#selId{font-size:20px;font-weight:700;color:#1e3a8a;margin-top:2px;}
+#selStatus{font-size:11px;color:#6b7280;background:#e5e7eb;padding:2px 8px;border-radius:10px;}
+
+/* search */
+#searchWrap{padding:10px 12px;border-bottom:1px solid #dbeafe;display:flex;gap:6px;}
+#searchInput{flex:1;border:1px solid #bfdbfe;border-radius:6px;padding:6px 10px;font-size:12px;color:#1e3a8a;background:#fff;}
+#searchBtn{background:#2563eb;color:#fff;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:13px;}
+
+/* filters */
+#filterWrap{padding:6px 12px;border-bottom:1px solid #dbeafe;display:flex;gap:6px;}
+select.fsel{flex:1;border:1px solid #bfdbfe;border-radius:6px;padding:5px 6px;font-size:11px;color:#374151;background:#fff;}
+
+/* ficha */
+.sec-title{font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.8px;padding:10px 14px 4px;}
+.ficha-row{display:flex;justify-content:space-between;align-items:center;padding:5px 14px;border-bottom:.5px solid #e5e7eb;font-size:12px;}
+.ficha-row .fk{color:#6b7280;}
+.ficha-row .fv{font-weight:600;color:#111827;}
+.ficha-row .fv.green{color:#059669;}
+.ficha-row .fv.red{color:#dc2626;}
+.ficha-row .fv.amber{color:#d97706;}
+
+/* log */
+#logWrap{flex:1;overflow-y:auto;padding:0 0 8px;}
+.log-entry{display:flex;align-items:flex-start;gap:8px;padding:7px 12px;border-bottom:.5px solid #f0f4ff;animation:slideIn .35s;}
+@keyframes slideIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.log-dot{width:10px;height:10px;border-radius:50%;margin-top:3px;flex-shrink:0;}
+.log-dot.ok{background:#10b981;}
+.log-dot.warn{background:#f59e0b;}
+.log-dot.err{background:#ef4444;}
+.log-body{flex:1;min-width:0;}
+.log-id{font-size:12px;font-weight:600;color:#1e3a8a;}
+.log-sub{font-size:10px;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.log-time{font-size:10px;color:#9ca3af;flex-shrink:0;}
+
+/* bar chart tipos */
+.bar-wrap{padding:4px 14px;}
+.bar-row2{display:flex;align-items:center;gap:6px;margin-bottom:5px;}
+.bar-lbl{font-size:10px;color:#6b7280;width:52px;text-align:right;flex-shrink:0;}
+.bar-bg2{flex:1;height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden;}
+.bar-in{height:100%;border-radius:4px;transition:width .6s;}
+.bar-n{font-size:10px;color:#374151;width:22px;text-align:right;}
+
+/* walker icon on map */
+.walker-icon{font-size:22px;line-height:1;}
+.lamp-icon-ok,.lamp-icon-warn,.lamp-icon-err{font-size:16px;}
+</style>
+</head>
+<body>
+<div style="display:flex;flex-direction:column;height:100vh;">
+
+<!-- HEADER -->
+<div id="header">
+  <div id="header-left">
+    <div class="brandLogoFrame" aria-label="San Nicolás de los Garza">
+      <img src="sng-logo.png" alt="San Nicolás de los Garza">
+    </div>
+    <div id="header-title">
+      <h1>Centro de Control · Alumbrado Público</h1>
+      <p>Dashboard GIS · Mapbox 3D · reportes QR ciudadanos</p>
+    </div>
+  </div>
+  <button id="live-btn"><div class="live-dot"></div> Monitoreo QR en tiempo real</button>
+</div>
+
+<!-- STAT BAR -->
+<div id="statbar">
+  <div class="stat-item">
+    <div class="stat-label">Total luminarias</div>
+    <div class="stat-value" id="sTot">1,536</div>
+    <div class="stat-sub">Inventario cargado</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-label">Censadas ruta</div>
+    <div class="stat-value red" id="sCens">0</div>
+    <div class="stat-sub" id="sFlash">Parpadean en mapa</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-label">Con falla</div>
+    <div class="stat-value" id="sFall" style="color:#fbbf24;">0</div>
+    <div class="stat-sub">Detectadas en campo</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-label">Tipos</div>
+    <div class="stat-value" id="sTipos">4</div>
+    <div class="stat-sub">Tecnologías</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-label">Avance</div>
+    <div class="stat-value" id="sAvance">0%</div>
+    <div class="stat-sub">De la ruta de censo</div>
+  </div>
+</div>
+<div id="routebar"><div id="routefill"></div></div>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- MAP -->
+  <div id="mapWrap">
+    <div id="map"></div>
+    <div id="maptoolbar">
+      <div class="mt-btn" title="Config">⚙</div>
+      <div class="mt-btn" title="Noche">🌙</div>
+      <div class="mt-btn" title="Capas">🗂</div>
+      <div class="mt-btn" title="Info">ℹ</div>
+      <div class="mt-btn" title="Datos">📊</div>
+      <div class="mt-btn" title="Expandir">⛶</div>
+      <div class="mt-btn" title="Regla">📐</div>
+      <div class="mt-btn" title="Mapa">🗺</div>
+    </div>
+    <div id="legend">
+      <div class="leg-item"><div class="leg-dot" style="background:#10b981"></div>Operativa</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#f59e0b"></div>Con falla</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#ef4444"></div>Fuera de servicio</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#3b82f6;border:2px solid #fff"></div>Seleccionada</div>
+    </div>
+    <div id="mapctrl">
+      <button class="ctrl-btn" onclick="resetAll()">↺ Reset</button>
+      <select class="ctrl-btn" onchange="speed=parseFloat(this.value)" style="padding:5px 8px;">
+        <option value=".5">0.5×</option>
+        <option value="1" selected>1×</option>
+        <option value="2">2×</option>
+        <option value="3">3×</option>
+      </select>
+      <button class="ctrl-btn go" id="btnPlay" onclick="togglePlay()">▶ Iniciar censo</button>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div id="rightpanel">
+
+    <!-- selected lamp -->
+    <div id="selBanner">
+      <div>
+        <div class="tag">⁴ Atención municipal</div>
+        <div id="selId" style="font-size:17px;margin-top:4px;">—</div>
+      </div>
+      <div id="selStatus" class="sel-status">—</div>
+    </div>
+
+    <!-- search -->
+    <div id="searchWrap">
+      <input id="searchInput" type="text" placeholder="Buscar ID, tipo o capacidad"/>
+      <button id="searchBtn">🔍</button>
+    </div>
+
+    <!-- filters -->
+    <div id="filterWrap">
+      <select class="fsel"><option>Tipo: todos</option><option>LED</option><option>Sodio</option><option>Metal H.</option><option>Mercurio</option></select>
+      <select class="fsel"><option>Estado: todos</option><option>Operativa</option><option>Con falla</option><option>F. servicio</option></select>
+    </div>
+
+    <!-- ficha tecnica -->
+    <div class="sec-title">Ficha técnica de la luminaria</div>
+    <div class="ficha-row"><span class="fk">ID</span><span class="fv" id="fId">—</span></div>
+    <div class="ficha-row"><span class="fk">Tipo</span><span class="fv" id="fTipo">—</span></div>
+    <div class="ficha-row"><span class="fk">Capacidad</span><span class="fv" id="fCap">—</span></div>
+    <div class="ficha-row"><span class="fk">Lat/Lng</span><span class="fv" id="fLat" style="font-size:10px;">—</span></div>
+    <div class="ficha-row"><span class="fk">Estado</span><span class="fv" id="fEst">—</span></div>
+    <div class="ficha-row"><span class="fk">Reportes QR activos</span><span class="fv green" id="fQr">0</span></div>
+
+    <!-- tipos chart -->
+    <div class="sec-title">Distribución por tipo</div>
+    <div class="bar-wrap">
+      <div class="bar-row2"><div class="bar-lbl">LED</div><div class="bar-bg2"><div class="bar-in" id="bLED" style="width:0%;background:#3b82f6"></div></div><div class="bar-n" id="nLED">0</div></div>
+      <div class="bar-row2"><div class="bar-lbl">Sodio</div><div class="bar-bg2"><div class="bar-in" id="bSOD" style="width:0%;background:#f59e0b"></div></div><div class="bar-n" id="nSOD">0</div></div>
+      <div class="bar-row2"><div class="bar-lbl">Metal H.</div><div class="bar-bg2"><div class="bar-in" id="bMH" style="width:0%;background:#8b5cf6"></div></div><div class="bar-n" id="nMH">0</div></div>
+      <div class="bar-row2"><div class="bar-lbl">Mercurio</div><div class="bar-bg2"><div class="bar-in" id="bMERC" style="width:0%;background:#ef4444"></div></div><div class="bar-n" id="nMERC">0</div></div>
+    </div>
+
+    <!-- historial -->
+    <div class="sec-title">Historial de campo · tiempo real</div>
+    <div id="logWrap">
+      <div style="padding:20px 14px;font-size:12px;color:#9ca3af;text-align:center;">Sin registros aún.<br>Presiona "Iniciar censo" para comenzar.</div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<script>
+// ── MAP INIT (OpenStreetMap, zona San Nicolás de los Garza, NL) ──
+const map = L.map('map', {zoomControl:false, attributionControl:true}).setView([25.7449, -100.2995], 16);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  maxZoom:19, attribution:'© OpenStreetMap'
+}).addTo(map);
+L.control.zoom({position:'bottomright'}).addTo(map);
+
+// ── ROUTE: waypoints en zona San Nicolás (calles reales) ──
+const route = [
+  [25.7480, -100.2660],
+  [25.7476, -100.2653],
+  [25.7472, -100.2646],
+  [25.7468, -100.2638],
+  [25.7463, -100.2630],
+  [25.7458, -100.2623],
+  [25.7452, -100.2618],
+  [25.7446, -100.2615],
+  [25.7440, -100.2612],
+  [25.7435, -100.2618],
+  [25.7430, -100.2625],
+  [25.7426, -100.2633],
+  [25.7423, -100.2641],
+  [25.7421, -100.2650],
+  [25.7420, -100.2659],
+  [25.7421, -100.2668],
+  [25.7423, -100.2677],
+  [25.7427, -100.2685],
+  [25.7432, -100.2691],
+  [25.7438, -100.2695],
+  [25.7444, -100.2697],
+];
+
+// Draw full route on map
+const routeLine = L.polyline(route, {color:'#3b82f6', weight:3, opacity:.5, dashArray:'6,5'}).addTo(map);
+const doneLine  = L.polyline([], {color:'#3b82f6', weight:3, opacity:.9}).addTo(map);
+map.fitBounds(routeLine.getBounds(), {padding:[40,40]});
+
+// ── LAMP DATA (25 luminarias distribuidas a lo largo de la ruta) ──
+const types   = ['LED','LED','Sodio','Sodio','LED','Metal H.','Sodio','LED','Mercurio','LED','LED','Sodio','LED','Metal H.','LED','Sodio','LED','LED','Mercurio','LED','Sodio','LED','LED','Metal H.','LED'];
+const statuses= ['ok','ok','ok','warn','ok','ok','err','ok','ok','ok','warn','ok','ok','ok','ok','err','ok','ok','warn','ok','ok','ok','ok','ok','warn'];
+const caps    = ['50W','45W','70W','70W','50W','150W','70W','45W','80W','50W','45W','70W','50W','150W','50W','70W','45W','50W','80W','50W','70W','45W','50W','150W','50W'];
+const N = types.length;
+
+// interpolate positions along route
+function routePoint(frac){
+  const total = route.length - 1;
+  const seg = frac * total;
+  const i = Math.min(Math.floor(seg), total-1);
+  const f = seg - i;
+  const a = route[i], b = route[Math.min(i+1,total)];
+  return [a[0]+(b[0]-a[0])*f, a[1]+(b[1]-a[1])*f];
+}
+
+const lamps = types.map((type,i)=>{
+  const frac = (i+1)/(N+1);
+  const pos = routePoint(frac);
+  return {id:`SNG-${String(i+101).padStart(4,'0')}`, type, status:statuses[i], cap:caps[i], pos, frac, marker:null, censed:false};
+});
+
+// ── WALKER MARKER ──
+const walkerIcon = L.divIcon({className:'', html:'<div style="font-size:24px;filter:drop-shadow(0 0 4px #3b82f6);">🚶</div>', iconAnchor:[12,24]});
+const walkerMarker = L.marker(route[0], {icon:walkerIcon, zIndexOffset:1000}).addTo(map);
+
+// lamp marker icons
+function lampIcon(status, selected=false){
+  const colors={ok:'#10b981',warn:'#f59e0b',err:'#ef4444'};
+  const col = selected ? '#3b82f6' : colors[status];
+  const ring = selected ? `border:2.5px solid #fff;box-shadow:0 0 0 3px ${col};` : '';
+  return L.divIcon({
+    className:'',
+    html:`<div style="width:13px;height:13px;border-radius:50%;background:${col};${ring}opacity:.9;"></div>`,
+    iconAnchor:[6,6]
+  });
+}
+
+// ── STATE ──
+let t=0, playing=false, speed=1, animId=null, lastTime=null;
+const DURATION=30000;
+let selectedLamp=null;
+
+// ── INTERPOLATE WALKER ──
+function walkerPos(frac){
+  return routePoint(frac);
+}
+
+// ── DRAW / UPDATE ──
+function update(){
+  const pos = walkerPos(t);
+  walkerMarker.setLatLng(pos);
+
+  // done path
+  const donePts = [];
+  const steps = 60;
+  for(let s=0;s<=steps;s++) donePts.push(routePoint((s/steps)*t));
+  doneLine.setLatLngs(donePts);
+
+  // check lamps
+  lamps.forEach(lp=>{
+    if(!lp.censed && t >= lp.frac){
+      lp.censed = true;
+      const icon = lampIcon(lp.status);
+      lp.marker = L.marker(lp.pos, {icon}).addTo(map);
+      lp.marker.on('click',()=>selectLamp(lp));
+      addLog(lp);
+      updatePanel();
+      selectLamp(lp);
+    }
+  });
+
+  // HUD stats
+  const censed = lamps.filter(l=>l.censed);
+  document.getElementById('sCens').textContent = censed.length;
+  document.getElementById('sFall').textContent = censed.filter(l=>l.status!=='ok').length;
+  const pct = Math.round(t*100);
+  document.getElementById('sAvance').textContent = pct+'%';
+  document.getElementById('routefill').style.width = pct+'%';
+}
+
+function selectLamp(lp){
+  // reset prev
+  if(selectedLamp && selectedLamp.marker) selectedLamp.marker.setIcon(lampIcon(selectedLamp.status,false));
+  selectedLamp = lp;
+  if(lp.marker) lp.marker.setIcon(lampIcon(lp.status, true));
+  // panel
+  document.getElementById('selId').textContent = lp.id;
+  const slabels={ok:'Normal',warn:'Con falla',err:'F. servicio'};
+  const scolors={ok:'#059669',warn:'#d97706',err:'#dc2626'};
+  const sel = document.getElementById('selStatus');
+  sel.textContent = slabels[lp.status];
+  sel.style.color = scolors[lp.status];
+  sel.style.background = lp.status==='ok'?'#d1fae5':lp.status==='warn'?'#fef3c7':'#fee2e2';
+  document.getElementById('fId').textContent = lp.id;
+  document.getElementById('fTipo').textContent = lp.type;
+  document.getElementById('fCap').textContent = lp.cap;
+  document.getElementById('fLat').textContent = `${lp.pos[0].toFixed(6)}, ${lp.pos[1].toFixed(6)}`;
+  const festEl = document.getElementById('fEst');
+  festEl.textContent = slabels[lp.status];
+  festEl.className = 'fv '+(lp.status==='ok'?'green':lp.status==='warn'?'amber':'red');
+  document.getElementById('fQr').textContent = lp.status==='err'?'1':'0';
+  document.getElementById('fQr').className='fv '+(lp.status==='err'?'red':'green');
+}
+
+function updatePanel(){
+  const censed = lamps.filter(l=>l.censed);
+  const counts={LED:0,Sodio:0,'Metal H.':0,Mercurio:0};
+  censed.forEach(l=>counts[l.type]=(counts[l.type]||0)+1);
+  const max = Math.max(...Object.values(counts),1);
+  [['LED','bLED','nLED'],['Sodio','bSOD','nSOD'],['Metal H.','bMH','nMH'],['Mercurio','bMERC','nMERC']].forEach(([k,b,n])=>{
+    document.getElementById(b).style.width=Math.round((counts[k]||0)/max*100)+'%';
+    document.getElementById(n).textContent=counts[k]||0;
+  });
+}
+
+const stIcon={ok:'🟢',warn:'🟡',err:'🔴'};
+const stLabel={ok:'Operativa',warn:'Con falla',err:'F. servicio'};
+function addLog(lp){
+  const wrap = document.getElementById('logWrap');
+  if(wrap.children.length===1 && wrap.children[0].tagName!=='DIV'.match(/log/)) wrap.innerHTML='';
+  const now = new Date();
+  const ts = now.toTimeString().slice(0,8);
+  const div=document.createElement('div');
+  div.className='log-entry';
+  div.innerHTML=`
+    <div class="log-dot ${lp.status}"></div>
+    <div class="log-body">
+      <div class="log-id">${lp.id} <span style="font-size:10px;color:#6b7280;font-weight:400">${lp.type} · ${lp.cap}</span></div>
+      <div class="log-sub">${stLabel[lp.status]} · ${lp.pos[0].toFixed(5)}, ${lp.pos[1].toFixed(5)}</div>
+    </div>
+    <div class="log-time">${ts}</div>`;
+  div.onclick=()=>selectLamp(lp);
+  div.style.cursor='pointer';
+  wrap.insertBefore(div, wrap.firstChild);
+  if(wrap.children.length>50) wrap.removeChild(wrap.lastChild);
+}
+
+// ── ANIMATION ──
+function animate(ts){
+  if(!lastTime) lastTime=ts;
+  const delta=(ts-lastTime)*speed;
+  lastTime=ts;
+  t=Math.min(1,t+delta/DURATION);
+  update();
+  if(t<1 && playing) animId=requestAnimationFrame(animate);
+  else if(t>=1){
+    playing=false;
+    document.getElementById('btnPlay').textContent='▶ Repetir';
+    lastTime=null;
+  }
+}
+
+function togglePlay(){
+  if(t>=1){
+    t=0; lastTime=null;
+    lamps.forEach(l=>{l.censed=false;if(l.marker){map.removeLayer(l.marker);l.marker=null;}});
+    document.getElementById('logWrap').innerHTML='<div style="padding:20px 14px;font-size:12px;color:#9ca3af;text-align:center;">Reiniciando censo…</div>';
+    selectedLamp=null;
+    document.getElementById('selId').textContent='—';
+    document.getElementById('selStatus').textContent='—';
+    ['fId','fTipo','fCap','fLat','fEst'].forEach(id=>document.getElementById(id).textContent='—');
+    doneLine.setLatLngs([]);
+    updatePanel();
+  }
+  playing=!playing;
+  if(playing){
+    document.getElementById('btnPlay').textContent='⏸ Pausar';
+    lastTime=null;
+    animId=requestAnimationFrame(animate);
+  } else {
+    document.getElementById('btnPlay').textContent='▶ Continuar';
+    if(animId) cancelAnimationFrame(animId);
+  }
+}
+
+function resetAll(){
+  playing=false;if(animId)cancelAnimationFrame(animId);
+  t=0;lastTime=null;
+  lamps.forEach(l=>{l.censed=false;if(l.marker){map.removeLayer(l.marker);l.marker=null;}});
+  doneLine.setLatLngs([]);
+  walkerMarker.setLatLng(route[0]);
+  document.getElementById('logWrap').innerHTML='<div style="padding:20px 14px;font-size:12px;color:#9ca3af;text-align:center;">Sin registros aún.<br>Presiona "Iniciar censo" para comenzar.</div>';
+  document.getElementById('btnPlay').textContent='▶ Iniciar censo';
+  selectedLamp=null;
+  ['sCens','sFall'].forEach(id=>document.getElementById(id).textContent='0');
+  document.getElementById('sAvance').textContent='0%';
+  document.getElementById('routefill').style.width='0%';
+  document.getElementById('selId').textContent='—';
+  document.getElementById('selStatus').textContent='—';
+  ['fId','fTipo','fCap','fLat','fEst'].forEach(id=>document.getElementById(id).textContent='—');
+  updatePanel();
+}
+</script>
+</body>
+</html>
